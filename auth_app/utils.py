@@ -32,5 +32,12 @@ def set_token_cookie(response, name, token):
 def set_auth_cookies(response, user):
     """Generate and store access and refresh tokens."""
     refresh = RefreshToken.for_user(user)
+    refresh["session_id"] = refresh["jti"]
     set_token_cookie(response, "access_token", refresh.access_token)
     set_token_cookie(response, "refresh_token", refresh)
+
+
+def delete_auth_cookies(response):
+    """Remove authentication cookies."""
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
