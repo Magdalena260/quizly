@@ -47,3 +47,12 @@ class RegistrationSerializer(serializers.ModelSerializer):
         """Create a user with a hashed password."""
         validated_data.pop("confirmed_password")
         return User.objects.create_user(**validated_data)
+
+
+class LoginSerializer(serializers.Serializer):
+    """Validate login credentials."""
+
+    username = serializers.CharField()
+    password = serializers.CharField(
+        write_only=True, trim_whitespace=False
+    )
