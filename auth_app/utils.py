@@ -1,5 +1,9 @@
 from django.conf import settings
 from django.contrib.auth import authenticate
+from rest_framework_simplejwt.token_blacklist.models import (
+    BlacklistedToken,
+    OutstandingToken,
+)
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from .api.serializers import LoginSerializer
@@ -41,3 +45,13 @@ def delete_auth_cookies(response):
     """Remove authentication cookies."""
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
+
+
+def revoke_session(token):
+    """Revoke the refresh token and associated access tokens."""
+    outstanding_token = OutstandingToken.objects.get(
+        jti=token["session_id"]
+    )
+    BlacklistedToken.objects.get_or_create(
+        token=outstanding_token
+    )
