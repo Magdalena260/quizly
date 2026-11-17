@@ -14,7 +14,7 @@ from auth_app.utils import (
     set_token_cookie,
 )
 
-from .authentication import CookieJWTAuthentication
+from .api.authentication import CookieJWTAuthentication
 from .serializers import RegistrationSerializer
 
 

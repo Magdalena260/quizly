@@ -7,11 +7,14 @@ from rest_framework_simplejwt.exceptions import TokenError
 from rest_framework_simplejwt.tokens import RefreshToken
 
 from auth_app.utils import (
+    delete_auth_cookies,
     get_login_user,
+    revoke_session,
     set_auth_cookies,
     set_token_cookie,
 )
 
+from .authentication import CookieJWTAuthentication
 from .serializers import RegistrationSerializer
 
 
@@ -70,7 +73,27 @@ class TokenRefreshView(APIView):
             refresh = RefreshToken(raw_token)
             JWTAuthentication().get_user(refresh)
         except (TokenError, AuthenticationFailed):
-            return Response({"detail": "Invalid refresh token."},
-                            status=status.HTTP_401_UNAUTHORIZED)
+            return Response(
+                {"detail": "Invalid refresh token."},
+                status=status.HTTP_401_UNAUTHORIZED)
         set_token_cookie(response, "access_token", refresh.access_token)
+        return response
+
+
+class LogoutView(APIView):
+    """Revoke the session and remove authentication cookies."""
+
+    authentication_classes = [CookieJWTAuthentication]
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        """Invalidate the session and delete cookies."""
+        revoke_session(request.auth)
+        response = Response({
+            "detail": (
+                "Log-Out successfully! All Tokens will be deleted. "
+                "Refresh token is now invalid."
+            )
+        })
+        delete_auth_cookies(response)
         return response
