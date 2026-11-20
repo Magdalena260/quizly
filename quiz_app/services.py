@@ -82,3 +82,13 @@ def generate_quiz_questions(topic):
     )
 
     return json.loads(response.text)
+
+
+    def generate_quiz_from_video(url):
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+        audio_path = download_audio(url, temp_dir)
+        transcript = transcribe_audio(audio_path)
+
+        return generate_quiz_questions(transcript)
