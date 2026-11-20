@@ -1,5 +1,6 @@
 import os
 import json
+import tempfile
 from pathlib import Path
 
 import whisper
@@ -84,9 +85,7 @@ def generate_quiz_questions(topic):
     return json.loads(response.text)
 
 
-    def generate_quiz_from_video(url):
-    import tempfile
-
+def generate_quiz_from_video(url):
     with tempfile.TemporaryDirectory() as temp_dir:
         audio_path = download_audio(url, temp_dir)
         transcript = transcribe_audio(audio_path)
