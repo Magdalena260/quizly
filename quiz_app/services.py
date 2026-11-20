@@ -1,5 +1,9 @@
 import os
 import json
+from pathlib import Path
+
+import whisper
+import yt_dlp
 
 from dotenv import load_dotenv
 from google import genai
@@ -8,6 +12,34 @@ from google import genai
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+
+def download_audio(url, output_path):
+    options = {
+        "format": "bestaudio/best",
+        "outtmpl": str(Path(output_path) / "audio.%(ext)s"),
+        "postprocessors": [
+            {
+                "key": "FFmpegExtractAudio",
+                "preferredcodec": "mp3",
+                "preferredquality": "192",
+            }
+        ],
+        "quiet": True,
+        "noplaylist": True,
+    }
+
+    with yt_dlp.YoutubeDL(options) as downloader:
+        downloader.download([url])
+
+    return str(Path(output_path) / "audio.mp3")
+
+
+def transcribe_audio(audio_path):
+    model = whisper.load_model("base")
+    result = model.transcribe(audio_path)
+
+    return result["text"]
 
 
 def generate_quiz_questions(topic):
