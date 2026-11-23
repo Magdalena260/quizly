@@ -7,6 +7,7 @@ from rest_framework.response import Response
 
 from quiz_app.models import Quiz, Question
 from quiz_app.services import (
+    QuizDownloadUnavailable,
     QuizGenerationUnavailable,
     generate_quiz_from_video,
 )
@@ -41,6 +42,18 @@ class QuizListView(generics.ListCreateAPIView):
 
         try:
             quiz_data = generate_quiz_from_video(url)
+
+        except QuizDownloadUnavailable:
+            return Response(
+                {
+                    "detail": (
+                        "The YouTube video could not be downloaded. "
+                        "Please try again later."
+                    )
+                },
+                status=status.HTTP_502_BAD_GATEWAY,
+            )
+
         except QuizGenerationUnavailable:
             return Response(
                 {

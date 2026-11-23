@@ -7,7 +7,10 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from quiz_app.models import Quiz, Question
-from quiz_app.services import QuizGenerationUnavailable
+from quiz_app.services import (
+    QuizDownloadUnavailable,
+    QuizGenerationUnavailable,
+)
 
 
 @override_settings(ALLOWED_HOSTS=["testserver", "localhost", "127.0.0.1"])
@@ -76,41 +79,59 @@ class QuizAPITests(APITestCase):
             {"title": "Fremder Zugriff"},
             format="json",
         )
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
 
     def test_other_user_cannot_delete(self):
         """Another user cannot delete the quiz."""
         self.client.force_authenticate(user=self.other_user)
         response = self.client.delete(self.detail_url)
-        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
-        self.assertTrue(Quiz.objects.filter(pk=self.quiz.pk).exists())
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_403_FORBIDDEN,
+        )
+        self.assertTrue(
+            Quiz.objects.filter(pk=self.quiz.pk).exists()
+        )
 
     def test_delete_own_quiz(self):
         """The owner can delete their quiz."""
         response = self.client.delete(self.detail_url)
         self.assertEqual(
-            response.status_code, status.HTTP_204_NO_CONTENT
+            response.status_code,
+            status.HTTP_204_NO_CONTENT,
         )
-        self.assertFalse(Quiz.objects.filter(pk=self.quiz.pk).exists())
+        self.assertFalse(
+            Quiz.objects.filter(pk=self.quiz.pk).exists()
+        )
 
     def test_quiz_not_found(self):
         """A missing quiz returns 404."""
         response = self.client.get("/api/quizzes/999999/")
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+        )
 
     def test_unauthenticated_access(self):
         """An anonymous user cannot list quizzes."""
         self.client.force_authenticate(user=None)
         response = self.client.get(self.list_url)
         self.assertEqual(
-            response.status_code, status.HTTP_401_UNAUTHORIZED
+            response.status_code,
+            status.HTTP_401_UNAUTHORIZED,
         )
 
     def test_other_user_does_not_see_quiz(self):
         """A user cannot see another user's quiz in the list."""
         self.client.force_authenticate(user=self.other_user)
         response = self.client.get(self.list_url)
-        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
         self.assertEqual(len(response.data), 0)
 
     def test_create_quiz(self):
@@ -134,12 +155,18 @@ class QuizAPITests(APITestCase):
         ):
             response = self.client.post(
                 self.list_url,
-                {"url": "https://www.youtube.com/watch?v=ecbnUUTkoNk"},
+                {
+                    "url": (
+                        "https://www.youtube.com/"
+                        "watch?v=ecbnUUTkoNk"
+                    )
+                },
                 format="json",
             )
 
         self.assertEqual(
-            response.status_code, status.HTTP_201_CREATED
+            response.status_code,
+            status.HTTP_201_CREATED,
         )
         self.assertEqual(Quiz.objects.count(), 2)
         self.assertEqual(
@@ -157,7 +184,12 @@ class QuizAPITests(APITestCase):
         ):
             response = self.client.post(
                 self.list_url,
-                {"url": "https://www.youtube.com/watch?v=ecbnUUTkoNk"},
+                {
+                    "url": (
+                        "https://www.youtube.com/"
+                        "watch?v=ecbnUUTkoNk"
+                    )
+                },
                 format="json",
             )
 
@@ -167,11 +199,38 @@ class QuizAPITests(APITestCase):
         )
         self.assertEqual(Quiz.objects.count(), 1)
 
+    def test_youtube_download_unavailable(self):
+        """A failed YouTube download returns HTTP 502."""
+        with patch(
+            "quiz_app.api.views.generate_quiz_from_video",
+            side_effect=QuizDownloadUnavailable("Download blocked"),
+        ):
+            response = self.client.post(
+                self.list_url,
+                {
+                    "url": (
+                        "https://www.youtube.com/"
+                        "watch?v=ecbnUUTkoNk"
+                    )
+                },
+                format="json",
+            )
+
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_502_BAD_GATEWAY,
+        )
+        self.assertEqual(Quiz.objects.count(), 1)
+        self.assertIn("detail", response.data)
+
     def test_create_without_url(self):
         """Creating a quiz without a URL is rejected."""
         response = self.client.post(
-            self.list_url, {}, format="json"
+            self.list_url,
+            {},
+            format="json",
         )
         self.assertEqual(
-            response.status_code, status.HTTP_400_BAD_REQUEST
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
         )

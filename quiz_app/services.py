@@ -10,6 +10,7 @@ import yt_dlp
 from dotenv import load_dotenv
 from google import genai
 from google.genai.errors import ServerError
+from yt_dlp.utils import DownloadError
 
 
 load_dotenv()
@@ -19,6 +20,10 @@ client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
 
 class QuizGenerationUnavailable(Exception):
     """Raised when the AI service is temporarily unavailable."""
+
+
+class QuizDownloadUnavailable(Exception):
+    """Raised when a YouTube video cannot be downloaded."""
 
 
 def download_audio(url, output_path):
@@ -36,8 +41,13 @@ def download_audio(url, output_path):
         "noplaylist": True,
     }
 
-    with yt_dlp.YoutubeDL(options) as downloader:
-        downloader.download([url])
+    try:
+        with yt_dlp.YoutubeDL(options) as downloader:
+            downloader.download([url])
+    except DownloadError as exc:
+        raise QuizDownloadUnavailable(
+            "The YouTube video could not be downloaded."
+        ) from exc
 
     return str(Path(output_path) / "audio.mp3")
 
