@@ -1,5 +1,6 @@
-import os
+
 import json
+import os
 import tempfile
 from pathlib import Path
 
@@ -8,11 +9,16 @@ import yt_dlp
 
 from dotenv import load_dotenv
 from google import genai
+from google.genai.errors import ServerError
 
 
 load_dotenv()
 
 client = genai.Client(api_key=os.getenv("GEMINI_API_KEY"))
+
+
+class QuizGenerationUnavailable(Exception):
+    """Raised when the AI service is temporarily unavailable."""
 
 
 def download_audio(url, output_path):
@@ -74,13 +80,18 @@ def generate_quiz_questions(topic):
     vier Antwortmöglichkeiten entsprechen.
     """
 
-    response = client.models.generate_content(
-        model="gemini-3.5-flash-lite",
-        contents=prompt,
-        config={
-            "response_mime_type": "application/json",
-        },
-    )
+    try:
+        response = client.models.generate_content(
+            model="gemini-3.5-flash-lite",
+            contents=prompt,
+            config={
+                "response_mime_type": "application/json",
+            },
+        )
+    except ServerError as exc:
+        raise QuizGenerationUnavailable(
+            "Gemini is temporarily unavailable."
+        ) from exc
 
     return json.loads(response.text)
 
