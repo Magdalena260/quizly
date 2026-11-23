@@ -44,20 +44,18 @@ class LoginView(APIView):
     authentication_classes = []
 
     def post(self, request):
-        """Log in and return user information."""
+        """Validate credentials and return user information."""
         user = get_login_user(request)
         if user is None:
             return Response(
                 {"detail": "Invalid credentials."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
+        user_data = {
+            "id": user.id, "username": user.username, "email": user.email
+        }
         response = Response({
-            "detail": "Login successfully!",
-            "user": {
-                "id": user.id,
-                "username": user.username,
-                "email": user.email,
-            },
+            "detail": "Login successfully!", "user": user_data
         })
         set_auth_cookies(response, user)
         return response
@@ -71,23 +69,17 @@ class TokenRefreshView(APIView):
 
     def post(self, request):
         """Validate the refresh token and renew the access cookie."""
-        raw_token = request.COOKIES.get("refresh_token")
-        response = Response({"detail": "Token refreshed"})
         try:
+            raw_token = request.COOKIES.get("refresh_token")
             if not raw_token:
                 raise TokenError("Missing refresh token")
             refresh = RefreshToken(raw_token)
             JWTAuthentication().get_user(refresh)
         except (TokenError, AuthenticationFailed):
-            return Response(
-                {"detail": "Invalid refresh token."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
-        set_token_cookie(
-            response,
-            "access_token",
-            refresh.access_token,
-        )
+            error = {"detail": "Invalid refresh token."}
+            return Response(error, status=status.HTTP_401_UNAUTHORIZED)
+        response = Response({"detail": "Token refreshed"})
+        set_token_cookie(response, "access_token", refresh.access_token)
         return response
 
 
