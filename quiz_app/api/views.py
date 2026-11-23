@@ -6,7 +6,10 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from quiz_app.models import Quiz, Question
-from quiz_app.services import generate_quiz_from_video
+from quiz_app.services import (
+    QuizGenerationUnavailable,
+    generate_quiz_from_video,
+)
 
 from .permissions import IsQuizOwner
 from .serializers import QuizSerializer
@@ -34,11 +37,20 @@ class QuizListView(generics.ListCreateAPIView):
             })
 
         url = url.strip()
+        serializers.URLField().run_validation(url)
 
-        url_field = serializers.URLField()
-        url_field.run_validation(url)
-
-        quiz_data = generate_quiz_from_video(url)
+        try:
+            quiz_data = generate_quiz_from_video(url)
+        except QuizGenerationUnavailable:
+            return Response(
+                {
+                    "detail": (
+                        "Die KI ist momentan nicht verfügbar. "
+                        "Bitte versuche es später erneut."
+                    )
+                },
+                status=status.HTTP_503_SERVICE_UNAVAILABLE,
+            )
 
         with transaction.atomic():
             quiz = Quiz.objects.create(
@@ -53,10 +65,10 @@ class QuizListView(generics.ListCreateAPIView):
                 for question in quiz_data["questions"]
             ])
 
-        response_data = QuizSerializer(quiz).data
+        quiz.refresh_from_db()
 
         return Response(
-            response_data,
+            QuizSerializer(quiz).data,
             status=status.HTTP_201_CREATED,
         )
 
