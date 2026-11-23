@@ -16,6 +16,7 @@ The backend is built with Django and Django REST Framework.
 - Storage of quizzes, questions, and answer options
 - Retrieve, update, and delete personal quizzes
 - Access protection for quizzes owned by other users
+- Error handling for unavailable YouTube downloads and AI services
 
 ## Technologies
 
@@ -32,9 +33,9 @@ The backend is built with Django and Django REST Framework.
 
 ## Requirements
 
-- Python
+- Python compatible with the project dependencies
 - pip
-- FFmpeg
+- FFmpeg installed and available in the system PATH
 - Google Gemini API key
 - Internet connection
 
@@ -43,11 +44,9 @@ The backend is built with Django and Django REST Framework.
 ### 1. Clone the repository
 
 ```bash
-git clone <REPOSITORY-URL>
+git clone https://github.com/Magdalena260/quizly.git
 cd quizly
 ```
-
-Replace the placeholder with the actual GitHub repository URL.
 
 ### 2. Create a virtual environment
 
@@ -64,10 +63,10 @@ Activate the virtual environment on Windows PowerShell:
 ### 3. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+python -m pip install -r requirements.txt
 ```
 
-FFmpeg must also be installed and available in the system PATH.
+FFmpeg must be installed separately and available in the system PATH.
 
 ### 4. Configure environment variables
 
@@ -77,6 +76,8 @@ Create a `.env` file in the project root:
 DJANGO_SECRET_KEY=your_django_secret_key
 GEMINI_API_KEY=your_gemini_api_key
 ```
+
+Replace the placeholder values with your own credentials.
 
 Never commit real API keys or secrets to GitHub.
 
@@ -92,7 +93,7 @@ python manage.py migrate
 python manage.py runserver
 ```
 
-The API will be available at:
+The API will be available locally at:
 
 `http://127.0.0.1:8000/api/`
 
@@ -145,7 +146,7 @@ Example quiz generation request:
 }
 ```
 
-A successful generation creates a quiz containing three questions, each with four answer options and one correct answer.
+A successful generation creates a quiz containing three questions. Each question has four answer options and one correct answer.
 
 ## Quiz Generation Workflow
 
@@ -157,16 +158,41 @@ A successful generation creates a quiz containing three questions, each with fou
 6. Django saves the quiz and its questions to the database.
 7. The API returns the generated quiz as JSON.
 
-**Note:** Quiz generation depends on external services. If Gemini is temporarily unavailable, the API may return HTTP 503.
+## Error Handling
+
+Quiz generation depends on external services and may fail if YouTube or Gemini is unavailable.
+
+| HTTP Status | Description |
+|-------------|-------------|
+| 201 Created | Quiz generated successfully |
+| 400 Bad Request | Invalid or missing request data |
+| 401 Unauthorized | Authentication required |
+| 502 Bad Gateway | YouTube download failed |
+| 503 Service Unavailable | Gemini is temporarily unavailable |
+
+YouTube may restrict automated downloads or request additional authentication.
+
+If YouTube blocks the download, the API returns a controlled error response instead of an unhandled server exception.
+
+Example:
+
+```json
+{
+  "detail": "The YouTube video could not be downloaded. Please try again later."
+}
+```
 
 ## Automated Tests
 
-The project includes 21 automated API tests across two Django applications.
+The project includes 22 automated API tests across two Django applications:
 
-Run the tests with:
+- 13 quiz API tests
+- 9 authentication API tests
+
+Run all tests with:
 
 ```bash
-python manage.py test quiz_app auth_app
+python manage.py test
 ```
 
 The tests cover:
@@ -181,8 +207,9 @@ The tests cover:
 - Quiz deletion
 - Authentication and object-level permissions
 - Error handling when Gemini is unavailable
+- Error handling when a YouTube download fails
 
-Quiz generation is mocked in the automated API tests. A complete live test with YouTube, Whisper, and Gemini must be performed separately.
+Quiz generation is mocked in the automated API tests. A successful end-to-end live test depends on YouTube access and Gemini availability.
 
 ## Security
 
@@ -191,10 +218,12 @@ Quiz generation is mocked in the automated API tests. A complete live test with 
 - Quiz endpoints require authentication.
 - Users can only view their own quizzes in the quiz list.
 - Users cannot update or delete another user's quiz.
-- `.env`, `.venv`, and `db.sqlite3` are excluded from future Git tracking through `.gitignore`.
+- `.env`, `.venv`, and `db.sqlite3` are excluded from Git tracking through `.gitignore`.
 
 ## Project Status
 
 The backend includes authentication, quiz management, and AI-based quiz generation.
 
-**Automated test results: 21 tests passed, 0 failures.**
+**Automated test results: 22 tests passed, 0 failures.**
+
+The live YouTube download is currently restricted by YouTube's automated access protection. The API handles this failure with HTTP 502.
