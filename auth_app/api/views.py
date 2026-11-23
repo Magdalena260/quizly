@@ -1,3 +1,4 @@
+
 from rest_framework import generics, permissions, status
 from rest_framework.exceptions import AuthenticationFailed
 from rest_framework.response import Response
@@ -50,9 +51,14 @@ class LoginView(APIView):
                 {"detail": "Invalid credentials."},
                 status=status.HTTP_401_UNAUTHORIZED,
             )
-        response = Response({"detail": "Login successfully!", "user": {
-            "id": user.id, "username": user.username, "email": user.email
-        }})
+        response = Response({
+            "detail": "Login successfully!",
+            "user": {
+                "id": user.id,
+                "username": user.username,
+                "email": user.email,
+            },
+        })
         set_auth_cookies(response, user)
         return response
 
@@ -75,8 +81,13 @@ class TokenRefreshView(APIView):
         except (TokenError, AuthenticationFailed):
             return Response(
                 {"detail": "Invalid refresh token."},
-                status=status.HTTP_401_UNAUTHORIZED)
-        set_token_cookie(response, "access_token", refresh.access_token)
+                status=status.HTTP_401_UNAUTHORIZED,
+            )
+        set_token_cookie(
+            response,
+            "access_token",
+            refresh.access_token,
+        )
         return response
 
 
