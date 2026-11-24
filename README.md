@@ -1,121 +1,33 @@
-# Quizly – AI-Powered Quiz Generator
 
-Quizly is a REST API that automatically generates quizzes from YouTube videos using artificial intelligence.
+## Automated Tests
 
-The backend is built with Django and Django REST Framework.
+The project includes 27 automated tests:
 
-## Features
+- 11 authentication API tests
+- 16 quiz API and validation tests
+
+The tests cover:
 
 - User registration and login
 - JWT authentication using HttpOnly cookies
+- Token refresh and logout
 - Access and refresh token invalidation after logout
-- Automatic quiz generation from YouTube videos
-- Audio extraction using yt-dlp and FFmpeg
-- Audio transcription using OpenAI Whisper
-- Quiz question generation using Google Gemini
-- Generation of exactly 10 questions per quiz
-- Four answer options and one correct answer per question
-- Validation of AI-generated quiz data
-- Storage of quizzes, questions, and answer options
-- Retrieval, updating, and deletion of personal quizzes
-- Object-level access protection
-- Django Admin management of quizzes and questions
-- Error handling for unavailable YouTube downloads and AI services
+- Quiz creation with exactly 10 questions
+- Four answer options per question
+- Quiz retrieval, updating, and deletion
+- Authentication and object-level permissions
+- Rejection of non-YouTube URLs
+- Validation of generated quiz data
+- Error handling for YouTube and Gemini failures
 
-## Technologies
-
-- Python
-- Django
-- Django REST Framework
-- Simple JWT
-- SQLite
-- Google Gemini API
-- OpenAI Whisper
-- yt-dlp
-- FFmpeg
-- python-dotenv
-
-## Requirements
-
-- Python compatible with the project dependencies
-- pip
-- FFmpeg installed and available in the system PATH
-- Google Gemini API key
-- Internet connection
-
-## Installation
-
-### 1. Clone the repository
+Run the automated tests:
 
 ```bash
-git clone https://github.com/Magdalena260/quizly.git
-cd quizly
+python manage.py test
 ```
 
-### 2. Create a virtual environment
+Latest verified result: 27 tests passed, 0 failures.
 
-```bash
-python -m venv .venv
-```
-
-Activate the virtual environment on Windows PowerShell:
-
-```powershell
-.\.venv\Scripts\Activate.ps1
-```
-
-### 3. Install dependencies
-
-```bash
-python -m pip install -r requirements.txt
-```
-
-FFmpeg must be installed separately and available in the system PATH.
-
-### 4. Configure environment variables
-
-Create a `.env` file in the project root:
-
-```env
-DJANGO_SECRET_KEY=your_django_secret_key
-GEMINI_API_KEY=your_gemini_api_key
-```
-
-Replace the placeholder values with your own credentials.
-
-Never commit real API keys or secrets to GitHub.
-
-### 5. Apply database migrations
-
-```bash
-python manage.py migrate
-```
-
-### 6. Start the development server
-
-```bash
-python manage.py runserver
-```
-
-The API will be available locally at:
-
-`http://127.0.0.1:8000/api/`
-
-The Django Admin interface is available at:
-
-`http://127.0.0.1:8000/admin/`
-
-To create an administrator account, run:
-
-```bash
-python manage.py createsuperuser
-```
-
-## API Endpoints
-
-### Authentication
-
-| Method | Endpoint | Description |
-|---|---|---|
-| POST | `/api/register/` | Register a new user |
-| POST | `/api/login/` | Log in and set JWT
+The quiz generation tests use mocked AI responses.
+The complete Gemini live generation test remains
+unverified because the API returned HTTP 503.
