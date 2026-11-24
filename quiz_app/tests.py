@@ -225,3 +225,15 @@ class QuizAPITests(APITestCase):
         quiz_data["questions"][0]["answer"] = "Invalid option"
         with self.assertRaises(QuizGenerationUnavailable):
             validate_quiz_data(quiz_data)
+
+    def test_reject_non_youtube_url(self):
+        """Reject quiz creation from non-YouTube websites."""
+        response = self.client.post(
+            self.list_url,
+            {"url": "https://www.google.com"},
+            format="json",
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
