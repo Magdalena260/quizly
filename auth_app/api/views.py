@@ -47,10 +47,8 @@ class LoginView(APIView):
         """Validate credentials and return user information."""
         user = get_login_user(request)
         if user is None:
-            return Response(
-                {"detail": "Invalid credentials."},
-                status=status.HTTP_401_UNAUTHORIZED,
-            )
+            error = {"detail": "Invalid credentials."}
+            return Response(error, status=status.HTTP_401_UNAUTHORIZED)
         user_data = {
             "id": user.id, "username": user.username, "email": user.email
         }
@@ -70,12 +68,9 @@ class TokenRefreshView(APIView):
     def post(self, request):
         """Validate the refresh token and renew the access cookie."""
         try:
-            raw_token = request.COOKIES.get("refresh_token")
-            if not raw_token:
-                raise TokenError("Missing refresh token")
-            refresh = RefreshToken(raw_token)
+            refresh = RefreshToken(request.COOKIES["refresh_token"])
             JWTAuthentication().get_user(refresh)
-        except (TokenError, AuthenticationFailed):
+        except (KeyError, TokenError, AuthenticationFailed):
             error = {"detail": "Invalid refresh token."}
             return Response(error, status=status.HTTP_401_UNAUTHORIZED)
         response = Response({"detail": "Token refreshed"})

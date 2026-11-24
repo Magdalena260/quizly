@@ -77,19 +77,17 @@ def build_quiz_prompt(topic):
 
 def get_quiz_json_structure():
     """Return the expected JSON example for Gemini."""
+    question = {
+        "question_title": "Question",
+        "question_options": [
+            "Option A", "Option B", "Option C", "Option D"
+        ],
+        "answer": "Option A",
+    }
     return json.dumps({
         "title": "Quiz title",
         "description": "Short quiz description",
-        "questions": [{
-            "question_title": "Question",
-            "question_options": [
-                "Option A",
-                "Option B",
-                "Option C",
-                "Option D",
-            ],
-            "answer": "Option A",
-        }],
+        "questions": [question],
     })
 
 

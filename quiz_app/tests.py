@@ -26,24 +26,25 @@ def create_sample_quiz(owner):
         video_url=VIDEO_URL,
     )
     Question.objects.create(
-        quiz=quiz,
-        question_title="Who carries the ring?",
+        quiz=quiz, question_title="Who carries the ring?",
         question_options=["Frodo", "Gandalf", "Aragorn", "Legolas"],
         answer="Frodo",
     )
     return quiz
 
 
+def build_question(number):
+    """Build one valid question for testing."""
+    return {
+        "question_title": f"Question {number}",
+        "question_options": ["A", "B", "C", "D"],
+        "answer": "A",
+    }
+
+
 def build_quiz_data():
     """Return valid quiz data containing ten questions."""
-    questions = [
-        {
-            "question_title": f"Question {number}",
-            "question_options": ["A", "B", "C", "D"],
-            "answer": "A",
-        }
-        for number in range(1, 11)
-    ]
+    questions = [build_question(n) for n in range(1, 11)]
     return {
         "title": "New Quiz",
         "description": "Automatically generated",
@@ -61,12 +62,10 @@ class QuizAPITests(APITestCase):
         """Create test users and authenticate the owner."""
         user_model = get_user_model()
         self.user = user_model.objects.create_user(
-            username="testuser",
-            password="SecureTestPassword123!",
+            "testuser", password="SecureTestPassword123!"
         )
         self.other_user = user_model.objects.create_user(
-            username="otheruser",
-            password="SecureTestPassword456!",
+            "otheruser", password="SecureTestPassword456!"
         )
         self.quiz = create_sample_quiz(self.user)
         self.list_url = "/api/quizzes/"

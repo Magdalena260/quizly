@@ -50,15 +50,11 @@ class AuthenticationAPITests(APITestCase):
             "new@example.com",
             "SecureNewPassword123!",
         )
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_201_CREATED,
-        )
-        self.assertTrue(
-            get_user_model().objects.filter(
-                username="newuser"
-            ).exists()
-        )
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        user_exists = get_user_model().objects.filter(
+            username="newuser"
+        ).exists()
+        self.assertTrue(user_exists)
 
     def test_registration_password_mismatch(self):
         """Different passwords are rejected."""
@@ -85,10 +81,7 @@ class AuthenticationAPITests(APITestCase):
     def test_login_success(self):
         """Valid credentials produce authentication cookies."""
         response = self.login()
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access_token", response.cookies)
         self.assertIn("refresh_token", response.cookies)
         self.assertTrue(
@@ -126,28 +119,20 @@ class AuthenticationAPITests(APITestCase):
             status.HTTP_200_OK,
         )
         response = self.client.post(self.refresh_url)
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access_token", response.cookies)
 
     def test_logout_success(self):
         """Logout clears both authentication cookies."""
         login_response = self.login()
-        self.assertEqual(
-            login_response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(login_response.status_code, status.HTTP_200_OK)
         response = self.client.post(self.logout_url)
-        self.assertEqual(
-            response.status_code,
-            status.HTTP_200_OK,
-        )
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertIn("access_token", response.cookies)
         self.assertIn("refresh_token", response.cookies)
         self.assertEqual(
-            response.cookies["access_token"].value, ""
+            response.cookies["access_token"].value,
+            "",
         )
 
     def test_logout_without_login(self):
