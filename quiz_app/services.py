@@ -1,4 +1,3 @@
-
 import json
 import os
 import tempfile
@@ -92,19 +91,29 @@ def get_quiz_json_structure():
     })
 
 
+def call_gemini_model(model_name, prompt):
+    """Request JSON quiz data from one Gemini model."""
+    response = client.models.generate_content(
+        model=model_name,
+        contents=prompt,
+        config={"response_mime_type": "application/json"},
+    )
+    return json.loads(response.text)
+
+
 def request_quiz_from_gemini(prompt):
-    """Request structured quiz data from Gemini."""
-    try:
-        response = client.models.generate_content(
-            model="gemini-3.5-flash-lite",
-            contents=prompt,
-            config={"response_mime_type": "application/json"},
-        )
-        return json.loads(response.text)
-    except (ServerError, ValueError, TypeError) as exc:
-        raise QuizGenerationUnavailable(
-            "Gemini could not generate a valid quiz."
-        ) from exc
+    """Try an alternative Gemini model if one is overloaded."""
+    models = ("gemini-3.8-flash", "gemini-3.5-flash-lite")
+    for model_name in models:
+        try:
+            return call_gemini_model(model_name, prompt)
+        except ServerError:
+            continue
+        except (ValueError, TypeError) as exc:
+            raise QuizGenerationUnavailable(
+                "Gemini returned invalid JSON."
+            ) from exc
+    raise QuizGenerationUnavailable("Gemini models are unavailable.")
 
 
 def validate_question_options(options):
