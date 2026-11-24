@@ -5,7 +5,9 @@ from django.contrib.auth import get_user_model
 from django.test import override_settings
 from rest_framework import status
 from rest_framework.test import APITestCase
+from yt_dlp.utils import DownloadError
 
+from quiz_app import services
 from quiz_app.models import Quiz, Question
 from quiz_app.services import (
     QuizDownloadUnavailable,
@@ -237,3 +239,99 @@ class QuizAPITests(APITestCase):
             response.status_code,
             status.HTTP_400_BAD_REQUEST,
         )
+
+
+class QuizServiceTests(APITestCase):
+    """Test quiz services without external requests."""
+
+    def test_download_options(self):
+        """Check audio download and conversion settings."""
+        options = services.get_download_options("audio")
+        self.assertEqual(options["format"], "bestaudio/best")
+        self.assertTrue(options["noplaylist"])
+        self.assertEqual(
+            options["postprocessors"][0]["preferredcodec"], "mp3"
+        )
+
+    @patch("quiz_app.services.yt_dlp.YoutubeDL")
+    def test_download_audio_success(self, mock_downloader):
+        """Return the generated audio path after downloading."""
+        result = services.download_audio(VIDEO_URL, "audio")
+        self.assertTrue(result.endswith("audio.mp3"))
+        mock_downloader.assert_called_once()
+
+    @patch("quiz_app.services.yt_dlp.YoutubeDL")
+    def test_download_audio_failure(self, mock_downloader):
+        """Convert download errors into service errors."""
+        downloader = mock_downloader.return_value.__enter__.return_value
+        downloader.download.side_effect = DownloadError("Blocked")
+        with self.assertRaises(QuizDownloadUnavailable):
+            services.download_audio(VIDEO_URL, "audio")
+
+    @patch("quiz_app.services.whisper.load_model")
+    def test_transcribe_audio(self, mock_load_model):
+        """Return the recognized spoken text."""
+        model = mock_load_model.return_value
+        model.transcribe.return_value = {"text": "Hello Quizly"}
+        result = services.transcribe_audio("audio.mp3")
+        self.assertEqual(result, "Hello Quizly")
+        mock_load_model.assert_called_once_with("base")
+
+    def test_build_quiz_prompt(self):
+        """Include the transcript and quiz instructions."""
+        prompt = services.build_quiz_prompt("Tolkien story")
+        self.assertIn("Tolkien story", prompt)
+        self.assertIn("exactly 10", prompt)
+        self.assertIn("question_options", prompt)
+
+    @patch("quiz_app.services.client.models.generate_content")
+    def test_gemini_success(self, mock_generate):
+        """Parse a valid Gemini JSON response."""
+        mock_generate.return_value.text = '{"title": "Quiz"}'
+        result = services.request_quiz_from_gemini("Prompt")
+        self.assertEqual(result["title"], "Quiz")
+
+    @patch("quiz_app.services.client.models.generate_content")
+    def test_gemini_invalid_json(self, mock_generate):
+        """Reject malformed Gemini responses."""
+        mock_generate.return_value.text = "Not valid JSON"
+        with self.assertRaises(QuizGenerationUnavailable):
+            services.request_quiz_from_gemini("Prompt")
+
+    def test_reject_duplicate_options(self):
+        """Reject duplicate answer options."""
+        options = ["A", "A", "B", "C"]
+        self.assertFalse(services.validate_question_options(options))
+
+    def test_reject_empty_option(self):
+        """Reject empty answer options."""
+        options = ["A", "B", "", "D"]
+        self.assertFalse(services.validate_question_options(options))
+
+    def test_reject_invalid_metadata(self):
+        """Reject empty quiz titles."""
+        data = build_quiz_data()
+        data["title"] = ""
+        with self.assertRaises(QuizGenerationUnavailable):
+            services.validate_quiz_data(data)
+
+    @patch("quiz_app.services.request_quiz_from_gemini")
+    def test_generate_quiz_questions(self, mock_gemini):
+        """Validate quiz data returned by Gemini."""
+        mock_gemini.return_value = build_quiz_data()
+        result = services.generate_quiz_questions("Tolkien")
+        self.assertEqual(len(result["questions"]), 10)
+
+    @patch("quiz_app.services.generate_quiz_questions")
+    @patch("quiz_app.services.transcribe_audio")
+    @patch("quiz_app.services.download_audio")
+    def test_generate_quiz_from_video(
+        self, mock_download, mock_transcribe, mock_generate
+    ):
+        """Test the complete mocked generation workflow."""
+        mock_download.return_value = "audio.mp3"
+        mock_transcribe.return_value = "Tolkien transcript"
+        mock_generate.return_value = build_quiz_data()
+        result = services.generate_quiz_from_video(VIDEO_URL)
+        self.assertEqual(len(result["questions"]), 10)
+        mock_generate.assert_called_once_with("Tolkien transcript")
