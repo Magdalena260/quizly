@@ -36,6 +36,7 @@ def get_download_options(output_path):
             "preferredcodec": "mp3",
             "preferredquality": "192",
         }],
+        "js_runtimes": {"node": {}},
         "quiet": True,
         "noplaylist": True,
     }
